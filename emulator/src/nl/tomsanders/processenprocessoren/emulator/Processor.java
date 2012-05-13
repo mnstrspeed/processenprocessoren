@@ -257,7 +257,7 @@ public class Processor {
 				
 				System.out.println("Wrote to RAM at " + address + " value " + value);
 			} else if (address >= 0xFFFFFF00 && address <= 0xFFFFFFFC) {
-				System.out.println("Printing ASCII char: " + (char)(48 + value));
+				System.out.println("Printing ASCII char: " + (char)value);
 			} else {
 				System.out.println("Tried writing to " + address + 
 						", but no device was found");
