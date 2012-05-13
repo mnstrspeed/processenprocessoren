@@ -54,6 +54,8 @@ public class Processor {
 	private int registers[];
 	private boolean flags[];
 	
+	private AsyncInputBuffer inputBuffer;
+	
 	public Processor() {
 		this.ram = new int[RAM_SIZE_WORDS];
 		this.registers = new int[REGISTER_COUNT];
@@ -64,6 +66,7 @@ public class Processor {
 
 	public void reset() {
 		this.halted = false;
+		this.inputBuffer = new AsyncInputBuffer();
 		
 		Arrays.fill(this.ram, 0);
 		Arrays.fill(this.registers, 0);
@@ -108,11 +111,12 @@ public class Processor {
 	private int fetchInstruction() {
 		int address = this.registers[PROGRAM_COUNTER_REGISTER];
 		System.out.println("Fetching instruction at line " + ((address / 4) + 1));
-		return this.readRam(address);
+		return this.readAddress(address);
 	}
 
 	public void halt() {
 		this.halted = true;
+		this.inputBuffer.close();
 	}
 	
 	public void loadFlags(int instruction) {
@@ -128,7 +132,7 @@ public class Processor {
 		int offset = ByteHelper.getSignedBits(instruction, 8, 17);
 		
 		int readAddress = this.registers[addressRegister] + offset;
-		this.writeRegister(destRegister, this.readRam(readAddress));
+		this.writeRegister(destRegister, this.readAddress(readAddress));
 	}
 	
 	private void writeRamInstruction(int instruction) {
@@ -137,7 +141,7 @@ public class Processor {
 		int offset = ByteHelper.getSignedBits(instruction, 8, 17);
 		
 		int writeAddress = this.registers[addressRegister] + offset;
-		this.writeRam(writeAddress, this.registers[srcRegister]);
+		this.writeAddress(writeAddress, this.registers[srcRegister]);
 	}
 	
 	private void processArith(int instruction) {
@@ -245,7 +249,7 @@ public class Processor {
 		}
 	}
 	
-	public void writeRam(int address, int value) {
+	public void writeAddress(int address, int value) {
 		if (address % 4 == 0) {
 			if (address >= 0 && address < RAM_SIZE_BYTES) {
 				int realAddress = address / 4;
@@ -255,20 +259,24 @@ public class Processor {
 			} else if (address >= 0xFFFFFF00 && address <= 0xFFFFFFFC) {
 				System.out.println("Printing ASCII char: " + (char)(48 + value));
 			} else {
-				System.out.println("Tried writing to " + address + ", but no device was found");
+				System.out.println("Tried writing to " + address + 
+						", but no device was found");
 			}
 		} else {
 			throw new RuntimeException("Address is not a multiple of 4");
 		}
 	}
 	
-	public int readRam(int address) {
+	public int readAddress(int address) {
 		if (address % 4 == 0) {
 			if (address >= 0 && address < RAM_SIZE_BYTES) {
 				int realAddress = address / 4;
 				return this.ram[realAddress];
+			} else if (address >= 0xFFFFFF00 && address <= 0xFFFFFFFC) {
+				return this.inputBuffer.getNext();
 			} else {
-				System.out.println("Tried reading from " + address + ", but no device was found");
+				System.out.println("Tried reading from " + address + 
+						", but no device was found");
 				return 0;
 			}
 		}  else {
