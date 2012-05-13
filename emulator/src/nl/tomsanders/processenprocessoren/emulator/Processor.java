@@ -3,7 +3,8 @@ package nl.tomsanders.processenprocessoren.emulator;
 import java.util.Arrays;
 
 public class Processor {
-	private static final int RAM_SIZE_WORDS = 256;
+	private static final int RAM_SIZE_BYTES = 256 * 1024;
+	private static final int RAM_SIZE_WORDS = RAM_SIZE_BYTES / 4;
 	private static final int REGISTER_COUNT = 16;
 	
 	private static final int PROGRAM_COUNTER_REGISTER = 15;
@@ -106,7 +107,7 @@ public class Processor {
 
 	private int fetchInstruction() {
 		int address = this.registers[PROGRAM_COUNTER_REGISTER];
-		System.out.println("Fetching instruction at " + ((address / 4) + 1));
+		System.out.println("Fetching instruction at line " + ((address / 4) + 1));
 		return this.readRam(address);
 	}
 
@@ -115,10 +116,10 @@ public class Processor {
 	}
 	
 	public void loadFlags(int instruction) {
-		this.flags[FLAG_NEGATIVE] = ByteHelper.getBit(instruction, 17) == 1 ? true : false;
-		this.flags[FLAG_OVERFLOW] = ByteHelper.getBit(instruction, 16) == 1 ? true : false;
-		this.flags[FLAG_ZERO] = ByteHelper.getBit(instruction, 9) == 1 ? true : false;
-		this.flags[FLAG_CARRY] = ByteHelper.getBit(instruction, 8) == 1 ? true : false;
+		this.flags[FLAG_NEGATIVE] = ByteHelper.getBit(instruction, 17) == 1;
+		this.flags[FLAG_OVERFLOW] = ByteHelper.getBit(instruction, 16) == 1;
+		this.flags[FLAG_ZERO] = ByteHelper.getBit(instruction, 9) == 1;
+		this.flags[FLAG_CARRY] = ByteHelper.getBit(instruction, 8) == 1;
 	}
 	
 	public void readRamInstruction(int instruction) {
@@ -143,7 +144,7 @@ public class Processor {
 		int registerB = ByteHelper.getBits(instruction, 0, 3);
 		int registerA = ByteHelper.getBits(instruction, 4, 7);
 		int constant = ByteHelper.getSignedBits(instruction, 8, 17);
-		boolean useConstant = ByteHelper.getBit(instruction, 18) == 0 ? true : false;
+		boolean useConstant = ByteHelper.getBit(instruction, 18) == 0;
 		
 		int valueB = this.registers[registerB];
 		int valueA = useConstant ? constant : this.registers[registerA];
@@ -157,8 +158,8 @@ public class Processor {
 			
 			if (opcode == ALU_OPC_ROL) {
 				result = Integer.rotateLeft(valueB, valueA);
-				this.flags[FLAG_OVERFLOW] = (ByteHelper.getBit(valueB, 31) ^ ByteHelper.getBit(result, 31)) == 1 ? true : false;
-				this.flags[FLAG_CARRY] = ByteHelper.getBit(result, 0) == 1 ? true : false;
+				this.flags[FLAG_OVERFLOW] = (ByteHelper.getBit(valueB, 31) ^ ByteHelper.getBit(result, 31)) == 1;
+				this.flags[FLAG_CARRY] = ByteHelper.getBit(result, 0) == 1;
 			} else if (opcode == ALU_OPC_AND) {
 				result = valueA & valueB;
 			} else if (opcode == ALU_OPC_OR) {
@@ -175,7 +176,7 @@ public class Processor {
 				this.flags[FLAG_CARRY] = valueA < 0 && result >= 0;
 			}
 			this.flags[FLAG_ZERO] = (result == 0);
-			this.flags[FLAG_NEGATIVE] = ByteHelper.getBit(result, 31) == 1 ? true : false;
+			this.flags[FLAG_NEGATIVE] = ByteHelper.getBit(result, 31) == 1;
 			
 			int destRegister = ByteHelper.getBits(instruction, 28, 31);
 			this.writeRegister(destRegister, result);
@@ -225,7 +226,7 @@ public class Processor {
 			int destRegister = ByteHelper.getBits(instruction, 28, 31);
 			int constant = ByteHelper.getSignedBits(instruction, 0, 21);
 			
-			boolean loadHigh = ByteHelper.getBit(instruction, 22) == 1 ? true : false;
+			boolean loadHigh = ByteHelper.getBit(instruction, 22) == 1;
 			if (loadHigh)
 				constant <<= 10;
 			
@@ -246,18 +247,15 @@ public class Processor {
 	
 	public void writeRam(int address, int value) {
 		if (address % 4 == 0) {
-			if (address < 0) {
-				// TODO: should be treated as unsigned int
-				address += RAM_SIZE_WORDS * 4;
-			}
-			int realAddress = address / 4;
-			this.ram[realAddress] = value;
-			
-			System.out.println("Wrote to RAM at " + address + " value " + value);
-			
-			if (address >= 0xFFFFFF00 && address <= 0xFFFFFFFC) {
-				// TODO: implement video memory
-				System.out.print((char)value);
+			if (address >= 0 && address < RAM_SIZE_BYTES) {
+				int realAddress = address / 4;
+				this.ram[realAddress] = value;
+				
+				System.out.println("Wrote to RAM at " + address + " value " + value);
+			} else if (address >= 0xFFFFFF00 && address <= 0xFFFFFFFC) {
+				System.out.println("Printing ASCII char: " + (char)(48 + value));
+			} else {
+				System.out.println("Tried writing to " + address + ", but no device was found");
 			}
 		} else {
 			throw new RuntimeException("Address is not a multiple of 4");
@@ -266,8 +264,13 @@ public class Processor {
 	
 	public int readRam(int address) {
 		if (address % 4 == 0) {
-			int realAddress = address / 4;
-			return this.ram[realAddress];
+			if (address >= 0 && address < RAM_SIZE_BYTES) {
+				int realAddress = address / 4;
+				return this.ram[realAddress];
+			} else {
+				System.out.println("Tried reading from " + address + ", but no device was found");
+				return 0;
+			}
 		}  else {
 			throw new RuntimeException("Address is not a multiple of 4");
 		}
