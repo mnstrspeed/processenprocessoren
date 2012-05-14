@@ -50,5 +50,6 @@ public class AsyncInputBuffer implements Runnable {
 	
 	public void close() {
 		this.open = false;
+		this.thread.interrupt();
 	}
 }
