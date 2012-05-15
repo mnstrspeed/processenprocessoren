@@ -53,20 +53,21 @@ public class Processor {
 	private int ram[];
 	private int registers[];
 	private boolean flags[];
+
+	private IoBuffer buffer;
 	
-	private AsyncInputBuffer inputBuffer;
-	
-	public Processor() {
+	public Processor(IoBuffer buffer) {
 		this.ram = new int[RAM_SIZE_WORDS];
 		this.registers = new int[REGISTER_COUNT];
 		this.flags = new boolean[FLAG_COUNT];
+
+		this.buffer = buffer;
 		
 		this.reset();
 	}
 
 	public void reset() {
 		this.halted = false;
-		this.inputBuffer = new AsyncInputBuffer();
 		
 		Arrays.fill(this.ram, 0);
 		Arrays.fill(this.registers, 0);
@@ -116,7 +117,6 @@ public class Processor {
 
 	public void halt() {
 		this.halted = true;
-		this.inputBuffer.close();
 	}
 	
 	public void loadFlags(int instruction) {
@@ -127,7 +127,7 @@ public class Processor {
 	}
 	
 	public void readRamInstruction(int instruction) {
-		int destRegister = ByteHelper.getBits(instruction, 18, 31);
+		int destRegister = ByteHelper.getBits(instruction, 28, 31);
 		int addressRegister = ByteHelper.getBits(instruction, 0, 3);
 		int offset = ByteHelper.getSignedBits(instruction, 8, 17);
 		
@@ -245,7 +245,7 @@ public class Processor {
 				this.registers[register] = value;
 			}
 		} else {
-			throw new RuntimeException("Register doesn't exist");
+			throw new RuntimeException("Register " + register + " doesn't exist");
 		}
 	}
 	
@@ -258,6 +258,7 @@ public class Processor {
 				System.out.println("Wrote to RAM at " + address + " value " + value);
 			} else if (address >= 0xFFFFFF00 && address <= 0xFFFFFFFC) {
 				System.out.println("Printing ASCII char: " + (char)value);
+				buffer.addOut((char)value);
 			} else {
 				System.out.println("Tried writing to " + address + 
 						", but no device was found");
@@ -273,7 +274,10 @@ public class Processor {
 				int realAddress = address / 4;
 				return this.ram[realAddress];
 			} else if (address >= 0xFFFFFF00 && address <= 0xFFFFFFFC) {
-				return this.inputBuffer.getNext();
+				Character c = buffer.pollIn();
+				if (c == null)
+					return 0xFFFFFFFF;
+				return c;
 			} else {
 				System.out.println("Tried reading from " + address + 
 						", but no device was found");
@@ -283,5 +287,4 @@ public class Processor {
 			throw new RuntimeException("Address is not a multiple of 4");
 		}
 	}
-	
 }
