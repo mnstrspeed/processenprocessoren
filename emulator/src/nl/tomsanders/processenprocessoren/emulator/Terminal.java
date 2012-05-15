@@ -8,6 +8,8 @@ import java.awt.Color;
 
 import java.awt.event.KeyListener;
 import java.awt.event.KeyEvent;
+import java.awt.event.WindowListener;
+import java.awt.event.WindowEvent;
 
 import javax.swing.JFrame;
 import javax.swing.JTextArea;
@@ -16,14 +18,19 @@ import javax.swing.JScrollPane;
 import javax.swing.text.Caret;
 import javax.swing.text.DefaultCaret;
 
-public class Terminal extends JFrame implements Observer, KeyListener {
+public class Terminal extends JFrame implements Observer, KeyListener,
+	   WindowListener {
 	private JTextArea textArea;
 	private IoBuffer buffer;
+	private Processor processor;
 
-	public Terminal(IoBuffer buffer) {
+	public Terminal(IoBuffer buffer, Processor processor) {
 		super("Terminal");
+		this.buffer = buffer;
+		this.buffer.addObserver(this);
+		this.processor = processor;
 		this.setSize(600, 400);
-		this.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+		this.setDefaultCloseOperation(JFrame.DO_NOTHING_ON_CLOSE);
 		this.textArea = new JTextArea();
 		this.textArea.setLineWrap(true);
 		this.textArea.setFont(new Font("Monospaced", Font.PLAIN, 16));
@@ -35,9 +42,8 @@ public class Terminal extends JFrame implements Observer, KeyListener {
 		caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
 		this.textArea.setCaret(caret);
 		this.textArea.addKeyListener(this);
+		this.addWindowListener(this);
 		this.add(new JScrollPane(textArea));
-		this.buffer = buffer;
-		this.buffer.addObserver(this);
 		this.setVisible(true);
 	}
 
@@ -46,21 +52,35 @@ public class Terminal extends JFrame implements Observer, KeyListener {
 		this.fixCaret();
 	}
 
-	public void keyPressed(KeyEvent e) {
-	}
-
-	public void keyReleased(KeyEvent e) {
-	}
-
 	public void keyTyped(KeyEvent e) {
-		if (e.getKeyChar() == KeyEvent.VK_ESCAPE)
-			System.exit(0);
-		this.buffer.addIn(e.getKeyChar());
-		this.fixCaret();
+		if (e.getKeyChar() == KeyEvent.VK_ESCAPE) {
+			shutdown();
+		} else {
+			this.buffer.addIn(e.getKeyChar());
+			this.fixCaret();
+		}
+	}
+
+	public void windowClosing(WindowEvent e) {
+		shutdown();
+	}
+
+	private void shutdown() {
+		processor.halt();
+		this.setVisible(false);
 	}
 
 	private void fixCaret() {
 		int position = this.textArea.getText().length();
 		this.textArea.setCaretPosition(position);
 	}
+
+	public void keyPressed(KeyEvent e) {}
+	public void keyReleased(KeyEvent e) {}
+	public void windowOpened(WindowEvent e) {}
+	public void windowClosed(WindowEvent e) {}
+	public void windowIconified(WindowEvent e) {}
+	public void windowDeiconified(WindowEvent e) {}
+	public void windowActivated(WindowEvent e) {}
+	public void windowDeactivated(WindowEvent e) {}
 }

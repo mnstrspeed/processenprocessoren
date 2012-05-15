@@ -4,7 +4,7 @@ public class Program {
 	public Program() {
 		IoBuffer buffer = new IoBuffer();
 		Processor processor = new Processor(buffer);
-		new Terminal(buffer);
+		new Terminal(buffer, processor);
 
 		processor.loadIntoRam(RomParser.parseFile("test.rom"));
 		int cycles = 0;
@@ -19,5 +19,6 @@ public class Program {
 		System.setProperty("awt.useSystemAAFontSettings", "on");
 		System.setProperty("swing.aatext", "true");
 		new Program();
+		System.exit(0);
 	}
 }
