@@ -11,6 +11,10 @@ import java.awt.event.KeyEvent;
 
 import javax.swing.JFrame;
 import javax.swing.JTextArea;
+import javax.swing.JScrollPane;
+
+import javax.swing.text.Caret;
+import javax.swing.text.DefaultCaret;
 
 public class Terminal extends JFrame implements Observer, KeyListener {
 	private JTextArea textArea;
@@ -25,8 +29,13 @@ public class Terminal extends JFrame implements Observer, KeyListener {
 		this.textArea.setFont(new Font("Monospaced", Font.PLAIN, 16));
 		this.textArea.setForeground(Color.white);
 		this.textArea.setBackground(Color.black);
+		this.textArea.setCaretColor(Color.white);
+		DefaultCaret caret = new DefaultCaret();
+		caret.setBlinkRate(0);
+		caret.setUpdatePolicy(DefaultCaret.ALWAYS_UPDATE);
+		this.textArea.setCaret(caret);
 		this.textArea.addKeyListener(this);
-		this.add(textArea);
+		this.add(new JScrollPane(textArea));
 		this.buffer = buffer;
 		this.buffer.addObserver(this);
 		this.setVisible(true);
@@ -34,7 +43,7 @@ public class Terminal extends JFrame implements Observer, KeyListener {
 
 	public void update(Observable o, Object arg) {
 		this.textArea.append(this.buffer.pollOut() + "");
-		this.fixCursor();
+		this.fixCaret();
 	}
 
 	public void keyPressed(KeyEvent e) {
@@ -47,10 +56,10 @@ public class Terminal extends JFrame implements Observer, KeyListener {
 		if (e.getKeyChar() == KeyEvent.VK_ESCAPE)
 			System.exit(0);
 		this.buffer.addIn(e.getKeyChar());
-		this.fixCursor();
+		this.fixCaret();
 	}
 
-	private void fixCursor() {
+	private void fixCaret() {
 		int position = this.textArea.getText().length();
 		this.textArea.setCaretPosition(position);
 	}
