@@ -34,7 +34,7 @@ public class Terminal extends JFrame implements Observer, KeyListener {
 
 	public void update(Observable o, Object arg) {
 		this.textArea.append(this.buffer.pollOut() + "");
-		fixCursor();
+		this.fixCursor();
 	}
 
 	public void keyPressed(KeyEvent e) {
