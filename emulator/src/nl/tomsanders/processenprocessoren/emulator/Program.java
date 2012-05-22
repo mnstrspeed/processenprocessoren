@@ -6,7 +6,7 @@ public class Program {
 		Processor processor = new Processor(buffer);
 		new Terminal(buffer, processor);
 
-		processor.loadIntoRam(RomParser.parseFile("test.rom"));
+		processor.loadIntoRam(RomParser.parseFile("example.rom"));
 		int cycles = 0;
 		while (!processor.isHalted()) {
 			processor.cycle();
