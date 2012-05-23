@@ -48,7 +48,14 @@ public class Terminal extends JFrame implements Observer, KeyListener,
 	}
 
 	public void update(Observable o, Object arg) {
-		this.textArea.append(this.buffer.pollOut() + "");
+		char c = this.buffer.pollOut();
+		if (c == KeyEvent.VK_BACK_SPACE) {
+			int length = this.textArea.getText().length();
+			if (length > 0)
+				this.textArea.replaceRange("", length - 1, length);
+		} else {
+			this.textArea.append(c + "");
+		}
 		this.fixCaret();
 	}
 
@@ -62,11 +69,11 @@ public class Terminal extends JFrame implements Observer, KeyListener,
 	}
 
 	public void windowClosing(WindowEvent e) {
-		shutdown();
+		this.shutdown();
 	}
 
 	private void shutdown() {
-		processor.halt();
+		this.processor.halt();
 		this.setVisible(false);
 	}
 
